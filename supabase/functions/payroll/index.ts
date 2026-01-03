@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getErrorMessage, isUUID, isMonth } from "../_shared/utils.ts";
+import { calculatePayroll } from "../_shared/payroll-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,32 +32,6 @@ interface SystemSettings {
   defaultHourlyRate: number;
 }
 
-// エラーメッセージを文字列として取得する関数
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'object' && error !== null) {
-    // Supabaseのエラーオブジェクトの場合
-    const err = error as Record<string, unknown>;
-    if (err.message && typeof err.message === 'string') {
-      return err.message;
-    }
-    if (err.details && typeof err.details === 'string') {
-      return err.details;
-    }
-    if (err.hint && typeof err.hint === 'string') {
-      return err.hint;
-    }
-    // オブジェクトの場合はJSON文字列化を試みる
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return String(error);
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -84,17 +60,6 @@ serve(async (req) => {
     const pathValue = pathParts.length > 2 ? pathParts[2] : null;
     const isCalculate = pathValue === "calculate";
 
-    // UUID形式かどうかを判定する関数
-    const isUUID = (str: string): boolean => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
-    // 月の形式かどうかを判定する関数
-    const isMonth = (str: string): boolean => {
-      const monthRegex = /^\d{4}-\d{2}$/;
-      return monthRegex.test(str);
-    };
 
     // Handle different HTTP methods
     switch (method) {
@@ -312,94 +277,12 @@ serve(async (req) => {
                 continue; // staffが見つからない場合はスキップ
               }
 
-              // 勤怠情報を集計
-              let totalWorkHours = 0;
-              const totalDays = attendances.length;
-
-              for (const attendance of attendances) {
-                totalWorkHours += Number(attendance.workHours) || 0;
-              }
-
               // 給与計算
-              let calculatedData: Record<string, unknown> = {};
-
-              if (staffData.monthlySalary) {
-                // 月給計算
-                calculatedData = {
-                  baseSalary: staffData.monthlySalary,
-                  workDays: totalDays,
-                  totalWorkHours: totalWorkHours,
-                  overtimeHours: Math.max(0, totalWorkHours - (systemSettings.regularHoursPerDay * totalDays)),
-                  // 残業代計算（簡易版）
-                  overtimePay: 0,
-                  // 控除
-                  deductions: staffData.deductions || [],
-                  // 手当
-                  allowances: staffData.allowances || [],
-                  // 合計
-                  total: staffData.monthlySalary,
-                };
-              } else if (staffData.hourlyRate) {
-                // 時給計算
-                const hourlyRate = staffData.hourlyRate;
-                const regularHours = Math.min(totalWorkHours, systemSettings.regularHoursPerDay * totalDays);
-                const overtimeHours = Math.max(0, totalWorkHours - regularHours);
-                const basePay = regularHours * hourlyRate;
-                const overtimePay = overtimeHours * hourlyRate * (1 + systemSettings.overtimeRate / 100);
-
-                calculatedData = {
-                  hourlyRate: hourlyRate,
-                  workDays: totalDays,
-                  totalWorkHours: totalWorkHours,
-                  regularHours: regularHours,
-                  overtimeHours: overtimeHours,
-                  basePay: basePay,
-                  overtimePay: overtimePay,
-                  // 控除
-                  deductions: staffData.deductions || [],
-                  // 手当
-                  allowances: staffData.allowances || [],
-                  // 合計
-                  total: basePay + overtimePay,
-                };
-              } else {
-                // 時給が設定されていない場合はシステム設定のデフォルト時給を使用
-                const hourlyRate = systemSettings.defaultHourlyRate;
-                const regularHours = Math.min(totalWorkHours, systemSettings.regularHoursPerDay * totalDays);
-                const overtimeHours = Math.max(0, totalWorkHours - regularHours);
-                const basePay = regularHours * hourlyRate;
-                const overtimePay = overtimeHours * hourlyRate * (1 + systemSettings.overtimeRate / 100);
-
-                calculatedData = {
-                  hourlyRate: hourlyRate,
-                  workDays: totalDays,
-                  totalWorkHours: totalWorkHours,
-                  regularHours: regularHours,
-                  overtimeHours: overtimeHours,
-                  basePay: basePay,
-                  overtimePay: overtimePay,
-                  // 控除
-                  deductions: staffData.deductions || [],
-                  // 手当
-                  allowances: staffData.allowances || [],
-                  // 合計
-                  total: basePay + overtimePay,
-                };
-              }
-
-              // 手当と控除を合計に反映
-              const allowancesTotal = (staffData.allowances || []).reduce(
-                (sum: number, item: { amount: number }) => sum + (item.amount || 0),
-                0
+              const calculatedData = calculatePayroll(
+                staffData,
+                attendances,
+                systemSettings
               );
-              const deductionsTotal = (staffData.deductions || []).reduce(
-                (sum: number, item: { amount: number }) => sum + (item.amount || 0),
-                0
-              );
-
-              calculatedData.total = (calculatedData.total as number) + allowancesTotal - deductionsTotal;
-              calculatedData.allowancesTotal = allowancesTotal;
-              calculatedData.deductionsTotal = deductionsTotal;
 
               payrollResults.push({
                 month: targetMonth,

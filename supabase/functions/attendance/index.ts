@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getErrorMessage, isUUID, isDate } from "../_shared/utils.ts";
+import {
+  validateBulkAttendanceRequest,
+  convertBulkAttendanceList,
+  validateAttendance,
+} from "../_shared/attendance-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,32 +35,6 @@ interface BulkAttendanceRequest {
   attendanceList: BulkAttendanceItem[];
 }
 
-// エラーメッセージを文字列として取得する関数
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'object' && error !== null) {
-    // Supabaseのエラーオブジェクトの場合
-    const err = error as Record<string, unknown>;
-    if (err.message && typeof err.message === 'string') {
-      return err.message;
-    }
-    if (err.details && typeof err.details === 'string') {
-      return err.details;
-    }
-    if (err.hint && typeof err.hint === 'string') {
-      return err.hint;
-    }
-    // オブジェクトの場合はJSON文字列化を試みる
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return String(error);
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -83,19 +63,6 @@ serve(async (req) => {
     const pathValue = pathParts.length > 2 ? pathParts[2] : null;
     const isBulk = pathValue === "bulk";
 
-    // UUID形式かどうかを判定する関数
-    const isUUID = (str: string): boolean => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
-    // 日付形式かどうかを判定する関数
-    const isDate = (str: string): boolean => {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(str)) return false;
-      const date = new Date(str);
-      return !isNaN(date.getTime());
-    };
 
     // Handle different HTTP methods
     switch (method) {
@@ -255,11 +222,12 @@ serve(async (req) => {
             const { date, attendanceList } = body;
 
             // バリデーション
-            if (!date || !Array.isArray(attendanceList)) {
+            const validation = validateBulkAttendanceRequest(date, attendanceList);
+            if (!validation.valid) {
               return new Response(
                 JSON.stringify({
                   success: false,
-                  error: "date and attendanceList array are required",
+                  error: validation.error || "Invalid request",
                 }),
                 {
                   headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -269,7 +237,7 @@ serve(async (req) => {
             }
 
             // attendanceListが空の場合は成功を返す
-            if (attendanceList.length === 0) {
+            if (Array.isArray(attendanceList) && attendanceList.length === 0) {
               return new Response(
                 JSON.stringify({
                   success: true,
@@ -282,29 +250,10 @@ serve(async (req) => {
             }
 
             // 各attendanceレコードを準備
-            const attendanceRecords: Omit<Attendance, "id">[] = attendanceList.map((item: BulkAttendanceItem) => ({
-              date: date,
-              staffId: item.staffId,
-              startTime: item.startTime || "00:00:00",
-              endTime: item.endTime || "00:00:00",
-              workHours: item.workHours || 0,
-            }));
-
-            // 必須フィールドのバリデーション
-            for (const record of attendanceRecords) {
-              if (!record.staffId) {
-                return new Response(
-                  JSON.stringify({
-                    success: false,
-                    error: "attendanceList内の各レコードにstaffIdが必要です",
-                  }),
-                  {
-                    headers: { ...corsHeaders, "Content-Type": "application/json" },
-                    status: 400,
-                  }
-                );
-              }
-            }
+            const attendanceRecords = convertBulkAttendanceList(
+              attendanceList as BulkAttendanceItem[],
+              date as string
+            );
 
             // 一括保存
             const { data: insertData, error: insertError } = await supabaseClient
@@ -353,17 +302,11 @@ serve(async (req) => {
         const newAttendance: Attendance = await req.json();
 
         // バリデーション
-        if (
-          !newAttendance.date ||
-          !newAttendance.startTime ||
-          !newAttendance.endTime ||
-          !newAttendance.staffId ||
-          newAttendance.workHours === undefined
-        ) {
+        const validation = validateAttendance(newAttendance);
+        if (!validation.valid) {
           return new Response(
             JSON.stringify({
-              error:
-                "必須フィールドが不足しています: date, startTime, endTime, staffId, workHours",
+              error: validation.error || "必須フィールドが不足しています: date, startTime, endTime, staffId, workHours",
             }),
             {
               headers: { ...corsHeaders, "Content-Type": "application/json" },

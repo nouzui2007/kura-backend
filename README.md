@@ -71,6 +71,7 @@ supabase functions serve staff
 supabase functions serve attendance
 supabase functions serve system-settings
 supabase functions serve payroll
+supabase functions serve profile
 ```
 
 ### 6. 動作確認
@@ -124,6 +125,7 @@ supabase functions deploy staff
 supabase functions deploy attendance
 supabase functions deploy system-settings
 supabase functions deploy payroll
+supabase functions deploy profile
 ```
 
 #### 5. 環境変数の設定（必要に応じて）
@@ -168,6 +170,15 @@ supabase secrets set KEY_NAME=value
 - `PATCH /payroll/{id}` - 給与データ更新
 - `DELETE /payroll/{id}` - 給与データ削除
 
+### Profile（プロフィール管理）
+
+- `GET /profile` - プロフィール一覧取得
+- `GET /profile/{id}` - プロフィール単一取得
+- `GET /profile/roles` - 権限リスト取得
+- `POST /profile` - プロフィール登録
+- `PATCH /profile/{id}` - プロフィール更新
+- `DELETE /profile/{id}` - プロフィール削除
+
 詳細なAPI仕様は `openapi.yaml` を参照してください。
 
 ## データベース構造
@@ -178,6 +189,7 @@ supabase secrets set KEY_NAME=value
 - `attendance` - 出勤記録
 - `system_settings` - システム設定
 - `payroll` - 給与データ
+- `profile` - プロフィール（認証ユーザー情報）
 
 マイグレーションファイルは `supabase/migrations/` ディレクトリにあります。
 
@@ -198,6 +210,35 @@ Edge Functionsは `supabase/functions/` ディレクトリにあります。
 - `attendance/index.ts` - 出勤記録管理API
 - `system-settings/index.ts` - システム設定管理API
 - `payroll/index.ts` - 給与計算・管理API
+- `profile/index.ts` - プロフィール管理API
+
+### ユニットテスト
+
+ロジック関数のユニットテストが `supabase/functions/_shared/__tests__/` ディレクトリにあります。
+
+```bash
+# すべてのテストを実行
+deno test supabase/functions/_shared/__tests__/
+
+# 特定のテストファイルを実行
+deno test supabase/functions/_shared/__tests__/utils.test.ts
+deno test supabase/functions/_shared/__tests__/staff-utils.test.ts
+deno test supabase/functions/_shared/__tests__/attendance-utils.test.ts
+deno test supabase/functions/_shared/__tests__/payroll-utils.test.ts
+
+# カバレッジ付きで実行
+deno test --coverage=coverage supabase/functions/_shared/__tests__/
+```
+
+テスト対象のロジック関数：
+- `getErrorMessage` - エラーメッセージ取得
+- `isUUID`, `isDate`, `isMonth` - 形式判定
+- `normalizeDateFields` - 日付フィールド正規化
+- `generateStaffId` - スタッフID生成
+- `validateBulkAttendanceRequest` - 一括出勤記録バリデーション
+- `convertBulkAttendanceList` - 一括出勤記録変換
+- `validateAttendance` - 出勤記録バリデーション
+- `calculatePayroll` - 給与計算ロジック
 
 ### ローカルでのテスト
 

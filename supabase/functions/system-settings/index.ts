@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getErrorMessage } from "../_shared/utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,32 +25,6 @@ interface SystemSettings {
   defaultHourlyRate: number;
 }
 
-// エラーメッセージを文字列として取得する関数
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'object' && error !== null) {
-    // Supabaseのエラーオブジェクトの場合
-    const err = error as Record<string, unknown>;
-    if (err.message && typeof err.message === 'string') {
-      return err.message;
-    }
-    if (err.details && typeof err.details === 'string') {
-      return err.details;
-    }
-    if (err.hint && typeof err.hint === 'string') {
-      return err.hint;
-    }
-    // オブジェクトの場合はJSON文字列化を試みる
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return String(error);
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests

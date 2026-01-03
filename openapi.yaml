@@ -16,6 +16,8 @@ tags:
     description: システム設定管理
   - name: Payroll
     description: 給与計算・管理
+  - name: Profile
+    description: プロフィール管理
 
 paths:
   /staff:
@@ -592,6 +594,146 @@ paths:
         '400':
           $ref: '#/components/responses/Error'
 
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: プロフィール一覧取得
+      description: Authenticationの全ユーザーとそのプロフィール情報を取得します。Profileレコードがない場合はnullを返します。
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProfileWithAuth'
+        '500':
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+        - Profile
+      summary: プロフィール登録
+      description: 新しいプロフィールを登録します
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/Error'
+
+  /profile/roles:
+    get:
+      tags:
+        - Profile
+      summary: 権限リスト取得
+      description: 利用可能な権限のリストを取得します
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        value:
+                          type: string
+                          enum:
+                            - system-admin
+                            - admin
+                            - user
+                        label:
+                          type: string
+                          enum:
+                            - システム管理者
+                            - 管理者
+                            - 一般
+
+  /profile/{id}:
+    get:
+      tags:
+        - Profile
+      summary: プロフィール単一取得
+      description: 指定したIDのプロフィール情報を取得します
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+        - Profile
+      summary: プロフィール更新
+      description: 指定したIDのプロフィール情報を更新します
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+        - Profile
+      summary: プロフィール削除
+      description: 指定したIDのプロフィールを削除します
+      parameters:
+        - $ref: '#/components/parameters/ProfileId'
+      responses:
+        '200':
+          description: 削除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/Error'
+
 components:
   parameters:
     StaffId:
@@ -617,6 +759,14 @@ components:
         type: string
         format: uuid
       description: 給与データID（UUID形式）
+    ProfileId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: プロフィールID（UUID形式）
 
   schemas:
     Staff:
@@ -987,12 +1137,99 @@ components:
       properties:
         month:
           type: string
-          pattern: '^\d{4}-\d{2}$'
+          pattern: "^\\d{4}-\\d{2}$"
         staffId:
           type: string
         data:
           type: object
           additionalProperties: true
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: プロフィールID
+        uid:
+          type: string
+          format: uuid
+          description: AuthenticationのユーザーID
+        username:
+          type: string
+          nullable: true
+          description: ユーザー名
+        role:
+          type: string
+          enum:
+            - system-admin
+            - admin
+            - user
+          description: 権限
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ProfileInput:
+      type: object
+      required:
+        - uid
+      properties:
+        uid:
+          type: string
+          format: uuid
+          description: AuthenticationのユーザーID
+        username:
+          type: string
+          nullable: true
+          description: ユーザー名
+        role:
+          type: string
+          enum:
+            - system-admin
+            - admin
+            - user
+          default: user
+          description: 権限
+
+    ProfileWithAuth:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: プロフィールID（Profileレコードがない場合はnull）
+        uid:
+          type: string
+          format: uuid
+          description: AuthenticationのユーザーID
+        email:
+          type: string
+          nullable: true
+          description: メールアドレス
+        username:
+          type: string
+          nullable: true
+          description: ユーザー名
+        role:
+          type: string
+          nullable: true
+          enum:
+            - system-admin
+            - admin
+            - user
+          description: 権限（Profileレコードがない場合はnull）
+        has_profile:
+          type: boolean
+          description: Profileレコードが存在するかどうか
+      required:
+        - id
+        - uid
+        - has_profile
 
     Error:
       type: object

@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getErrorMessage } from "../_shared/utils.ts";
+import { normalizeDateFields, generateStaffId } from "../_shared/staff-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,61 +40,6 @@ interface Staff {
   deductions?: Array<{ name: string; amount: number }>;
 }
 
-// エラーメッセージを文字列として取得する関数
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'object' && error !== null) {
-    // Supabaseのエラーオブジェクトの場合
-    const err = error as Record<string, unknown>;
-    if (err.message && typeof err.message === 'string') {
-      return err.message;
-    }
-    if (err.details && typeof err.details === 'string') {
-      return err.details;
-    }
-    if (err.hint && typeof err.hint === 'string') {
-      return err.hint;
-    }
-    // オブジェクトの場合はJSON文字列化を試みる
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return String(error);
-}
-
-// 日付フィールドを正規化する関数（空文字列をnullに変換、日付形式を検証）
-function normalizeDateFields(staff: Staff | Partial<Staff>): Staff | Partial<Staff> {
-  const normalized = { ...staff };
-  
-  // 日付フィールドのリスト
-  const dateFields = ['hireDate', 'birthDate', 'retireDate'] as const;
-  
-  for (const field of dateFields) {
-    const value = normalized[field];
-    if (value === '' || value === null || value === undefined) {
-      // 空文字列、null、undefinedの場合はundefinedに設定（PostgreSQLではNULLとして扱われる）
-      delete normalized[field];
-    } else if (typeof value === 'string') {
-      // 日付形式の検証（YYYY-MM-DD形式）
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(value)) {
-        throw new Error(`${field}の形式が正しくありません。YYYY-MM-DD形式で指定してください。`);
-      }
-      // 有効な日付かチェック
-      const date = new Date(value);
-      if (isNaN(date.getTime())) {
-        throw new Error(`${field}が無効な日付です。`);
-      }
-    }
-  }
-  
-  return normalized;
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -212,15 +159,13 @@ serve(async (req) => {
           );
         }
 
-        // IDが指定されていない場合、自動生成（staff_プレフィックス + UUIDの最初の8文字）
+        // IDが指定されていない場合、自動生成
         if (!newStaff.id) {
-          const uuid = crypto.randomUUID();
-          // UUIDの最初の8文字を使用してstaff_プレフィックスを付ける
-          newStaff.id = `staff_${uuid.substring(0, 8)}`;
+          newStaff.id = generateStaffId();
         }
 
         // 日付フィールドを正規化
-        const normalizedNewStaff = normalizeDateFields(newStaff) as Staff;
+        const normalizedNewStaff = normalizeDateFields<Staff>(newStaff);
 
         const { data: insertData, error: insertError } = await supabaseClient
           .from("staff")
