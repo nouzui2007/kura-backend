@@ -44,7 +44,7 @@ Deno.test("analyzeWorkTime - 残業なし（9時開始17時終了）", () => {
   assertEquals(result.earlyLeave, false);
 });
 
-Deno.test("analyzeWorkTime - 早上がりあり（12時開始18時終了）", () => {
+Deno.test("analyzeWorkTime - 早上あり（12時開始18時終了）", () => {
   const result = analyzeWorkTime(
     { workStartTime: "12:00", workEndTime: "18:00", date: "2025-02-12" },
     defaultSystemSettings
@@ -53,7 +53,7 @@ Deno.test("analyzeWorkTime - 早上がりあり（12時開始18時終了）", ()
   assertEquals(result.overtime, false); // 12+8=20, 18<20
 });
 
-Deno.test("analyzeWorkTime - 早上がりなし（9時開始16時終了）", () => {
+Deno.test("analyzeWorkTime - 早上なし（9時開始16時終了）", () => {
   const result = analyzeWorkTime(
     { workStartTime: "09:00", workEndTime: "16:00", date: "2025-02-12" },
     defaultSystemSettings

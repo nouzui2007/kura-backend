@@ -181,7 +181,7 @@ supabase secrets set KEY_NAME=value
 
 ### Work Analysis（勤務時間分析）
 
-- `POST /work-analysis` - 勤務時間分析（早出残業・残業・早上がり・深夜残業時間を算出）
+- `POST /work-analysis` - 勤務時間分析（早出残業・残業・早上・深夜残業時間を算出）
 
 詳細なAPI仕様は `openapi.yaml` を参照してください。
 
@@ -243,7 +243,7 @@ deno test --coverage=coverage supabase/functions/_shared/__tests__/
 - `generateStaffId` - スタッフID生成
 - `validateBulkAttendanceRequest` - 一括出勤記録バリデーション
 - `convertBulkAttendanceList` - 一括出勤記録変換
-- `analyzeWorkTime` - 勤務時間分析（早出残業・残業・早上がり・深夜残業）
+- `analyzeWorkTime` - 勤務時間分析（早出残業・残業・早上・深夜残業）
 - `validateAttendance` - 出勤記録バリデーション
 - `calculatePayroll` - 給与計算ロジック
 
