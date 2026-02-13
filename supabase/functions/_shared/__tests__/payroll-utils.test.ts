@@ -14,6 +14,7 @@ const defaultSystemSettings = {
   lateNightStartHour: 22,
   lateNightEndHour: 5,
   earlyOvertimeStandardHour: 7,
+  earlyLeaveStandardHour: 17,
   defaultHourlyRate: 1200,
 };
 

@@ -133,7 +133,7 @@ paths:
       tags:
         - Attendance
       summary: 出勤記録一覧取得
-      description: 出勤記録の一覧を取得します。クエリパラメータでフィルタリング可能です
+      description: 出勤記録の一覧を取得します。クエリパラメータでフィルタリング可能です。日付レンジ指定時はstartとendの両方を指定してください。
       parameters:
         - name: staffId
           in: query
@@ -145,7 +145,19 @@ paths:
           schema:
             type: string
             format: date
-          description: 日付でフィルタリング（YYYY-MM-DD形式）
+          description: 日付でフィルタリング（YYYY-MM-DD形式）。レンジ指定時は使用しません
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 日付レンジの開始（YYYY-MM-DD形式）。endとセットで指定
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date
+          description: 日付レンジの終了（YYYY-MM-DD形式）。startとセットで指定
       responses:
         '200':
           description: 成功
@@ -229,6 +241,9 @@ paths:
                       overtime:
                         type: boolean
                         description: 残業の有無
+                      earlyLeave:
+                        type: boolean
+                        description: 早上がりの有無
                       lateNightOvertimeHours:
                         type: number
                         description: 深夜残業時間（時間）
@@ -297,6 +312,8 @@ paths:
                   earlyOvertime:
                     type: boolean
                   overtime:
+                    type: boolean
+                  earlyLeave:
                     type: boolean
                   lateNightOvertimeHours:
                     type: number
@@ -481,7 +498,7 @@ paths:
         スタッフの勤務開始・終了時間から以下を算出します。
         - 早出残業: 勤務開始が早出残業基準時刻より前の場合にあり
         - 残業: 法定終了時刻（開始+法定労働時間）より後に勤務終了の場合にあり
-        - 早上がり: 法定終了時刻より前に勤務終了の場合にあり
+        - 早上がり: 退勤時間が早上がり手当基準時刻を上回っている場合にあり
         - 深夜残業時間: 勤務終了が深夜開始時刻を超えた場合の重複時間（時間）
       requestBody:
         required: true
@@ -1041,6 +1058,9 @@ components:
         overtime:
           type: boolean
           description: 残業の有無
+        earlyLeave:
+          type: boolean
+          description: 早上がりの有無
         lateNightOvertimeHours:
           type: number
           description: 深夜残業時間（時間）
@@ -1082,6 +1102,9 @@ components:
         overtime:
           type: boolean
           description: 残業の有無
+        earlyLeave:
+          type: boolean
+          description: 早上がりの有無
         lateNightOvertimeHours:
           type: number
           description: 深夜残業時間（時間）
@@ -1130,6 +1153,10 @@ components:
           type: integer
           description: 早出残業基準時刻（時）
           example: 7
+        earlyLeaveStandardHour:
+          type: integer
+          description: 早上がり手当基準時刻（時）
+          example: 17
         defaultHourlyRate:
           type: integer
           description: デフォルト時給（円）
@@ -1155,6 +1182,7 @@ components:
         - lateNightStartHour
         - lateNightEndHour
         - earlyOvertimeStandardHour
+        - earlyLeaveStandardHour
         - defaultHourlyRate
       properties:
         regularHoursPerDay:
@@ -1182,6 +1210,9 @@ components:
         earlyOvertimeStandardHour:
           type: integer
           example: 7
+        earlyLeaveStandardHour:
+          type: integer
+          example: 17
         defaultHourlyRate:
           type: integer
 
@@ -1275,7 +1306,7 @@ components:
           description: 残業あり（勤務終了が法定終了時刻より後）
         earlyLeave:
           type: boolean
-          description: 早上がり（勤務終了が法定終了時刻より前）
+          description: 早上がり（退勤時間が早上がり手当基準時刻を上回る場合）
         lateNightOvertimeHours:
           type: number
           description: 深夜残業時間（時間）

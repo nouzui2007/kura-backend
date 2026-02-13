@@ -2,13 +2,14 @@
  * 勤務時間分析の計算ロジック
  * - 早出残業: 勤務開始が早出残業基準時刻より前
  * - 残業: 法定終了時刻より後に勤務終了
- * - 早上がり: 法定終了時刻より前に勤務終了
+ * - 早上がり: 退勤時間が早上がり手当基準時刻を上回っている場合
  * - 深夜残業時間: 勤務終了が深夜開始時刻を超えた場合の重複時間
  */
 
 export interface SystemSettingsForWorkAnalysis {
   regularHoursPerDay: number;
   earlyOvertimeStandardHour: number;
+  earlyLeaveStandardHour: number;
   lateNightStartHour: number;
   lateNightEndHour: number;
 }
@@ -59,8 +60,9 @@ export function analyzeWorkTime(
   // 3. 残業: 勤務終了 > 法定終了
   const overtime = effectiveEndMinutes > regularEndMinutes;
 
-  // 4. 早上がり: 勤務終了 < 法定終了
-  const earlyLeave = effectiveEndMinutes < regularEndMinutes;
+  // 4. 早上がり: 退勤時間が早上がり手当基準時刻を上回っていたら true
+  const endHourDecimal = effectiveEndMinutes / 60;
+  const earlyLeave = endHourDecimal > systemSettings.earlyLeaveStandardHour;
 
   // 5. 深夜残業時間: 勤務終了が深夜開始時刻を超えた場合、勤務時間と深夜帯の重複時間
   const lateNightStartMinutes = systemSettings.lateNightStartHour * 60;

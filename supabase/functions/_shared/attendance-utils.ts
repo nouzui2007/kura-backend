@@ -8,6 +8,7 @@ interface Attendance {
   breakMinutes?: number;
   earlyOvertime?: boolean;
   overtime?: boolean;
+  earlyLeave?: boolean;
   lateNightOvertimeHours?: number;
 }
 
@@ -19,6 +20,7 @@ interface BulkAttendanceItem {
   breakMinutes?: number;
   earlyOvertime?: boolean;
   overtime?: boolean;
+  earlyLeave?: boolean;
   lateNightOvertimeHours?: number;
 }
 
@@ -69,6 +71,7 @@ export function convertBulkItemToAttendance(
     breakMinutes: item.breakMinutes,
     earlyOvertime: item.earlyOvertime,
     overtime: item.overtime,
+    earlyLeave: item.earlyLeave,
     lateNightOvertimeHours: item.lateNightOvertimeHours,
   };
 }

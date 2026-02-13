@@ -24,6 +24,7 @@ interface Attendance {
   breakMinutes?: number;
   earlyOvertime?: boolean;
   overtime?: boolean;
+  earlyLeave?: boolean;
   lateNightOvertimeHours?: number;
 }
 
@@ -35,6 +36,7 @@ interface BulkAttendanceItem {
   breakMinutes?: number;
   earlyOvertime?: boolean;
   overtime?: boolean;
+  earlyLeave?: boolean;
   lateNightOvertimeHours?: number;
 }
 
@@ -164,10 +166,52 @@ serve(async (req) => {
             );
           }
         } else {
-          // 一覧取得（クエリパラメータでstaffIdやdateでフィルタリング可能）
+          // 一覧取得（クエリパラメータでstaffId、date、日付レンジでフィルタリング可能）
           try {
             const staffId = url.searchParams.get("staffId");
             const date = url.searchParams.get("date");
+            const start = url.searchParams.get("start");
+            const end = url.searchParams.get("end");
+
+            // 日付レンジ指定時はstartとendの両方が必要
+            if (start || end) {
+              if (!start || !end) {
+                return new Response(
+                  JSON.stringify({
+                    success: false,
+                    error: "日付レンジ指定時はstartとendの両方が必要です",
+                  }),
+                  {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 400,
+                  }
+                );
+              }
+              if (!isDate(start) || !isDate(end)) {
+                return new Response(
+                  JSON.stringify({
+                    success: false,
+                    error: "startおよびendはYYYY-MM-DD形式で指定してください",
+                  }),
+                  {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 400,
+                  }
+                );
+              }
+              if (start > end) {
+                return new Response(
+                  JSON.stringify({
+                    success: false,
+                    error: "startはendより前の日付を指定してください",
+                  }),
+                  {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                    status: 400,
+                  }
+                );
+              }
+            }
 
             let query = supabaseClient
               .from("attendance")
@@ -179,7 +223,9 @@ serve(async (req) => {
               query = query.eq("staffId", staffId);
             }
 
-            if (date) {
+            if (start && end) {
+              query = query.gte("date", start).lte("date", end);
+            } else if (date) {
               query = query.eq("date", date);
             }
 

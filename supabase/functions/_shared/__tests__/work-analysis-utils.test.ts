@@ -4,6 +4,7 @@ import { analyzeWorkTime } from "../work-analysis-utils.ts";
 const defaultSystemSettings = {
   regularHoursPerDay: 8,
   earlyOvertimeStandardHour: 7,
+  earlyLeaveStandardHour: 17,
   lateNightStartHour: 22,
   lateNightEndHour: 5,
 };
@@ -31,7 +32,7 @@ Deno.test("analyzeWorkTime - 残業あり（9時開始18時終了）", () => {
     defaultSystemSettings
   );
   assertEquals(result.overtime, true); // 9+8=17, 18>17
-  assertEquals(result.earlyLeave, false);
+  assertEquals(result.earlyLeave, true); // 18>17（退勤が基準時刻を上回る）
 });
 
 Deno.test("analyzeWorkTime - 残業なし（9時開始17時終了）", () => {
@@ -43,12 +44,21 @@ Deno.test("analyzeWorkTime - 残業なし（9時開始17時終了）", () => {
   assertEquals(result.earlyLeave, false);
 });
 
-Deno.test("analyzeWorkTime - 早上がり（9時開始16時終了）", () => {
+Deno.test("analyzeWorkTime - 早上がりあり（12時開始18時終了）", () => {
+  const result = analyzeWorkTime(
+    { workStartTime: "12:00", workEndTime: "18:00", date: "2025-02-12" },
+    defaultSystemSettings
+  );
+  assertEquals(result.earlyLeave, true); // 18>17（退勤が基準時刻を上回る）
+  assertEquals(result.overtime, false); // 12+8=20, 18<20
+});
+
+Deno.test("analyzeWorkTime - 早上がりなし（9時開始16時終了）", () => {
   const result = analyzeWorkTime(
     { workStartTime: "09:00", workEndTime: "16:00", date: "2025-02-12" },
     defaultSystemSettings
   );
-  assertEquals(result.earlyLeave, true); // 17時前に終了
+  assertEquals(result.earlyLeave, false); // 16<=17（退勤が基準時刻を上回らない）
   assertEquals(result.overtime, false);
 });
 
