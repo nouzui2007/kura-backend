@@ -18,9 +18,13 @@ interface Attendance {
   id?: string;
   date: string;
   startTime: string;
-  endTime: string;
+  endTime?: string;
   staffId: string;
   workHours: number;
+  breakMinutes?: number;
+  earlyOvertime?: boolean;
+  overtime?: boolean;
+  lateNightOvertimeHours?: number;
 }
 
 interface BulkAttendanceItem {
@@ -28,6 +32,10 @@ interface BulkAttendanceItem {
   startTime?: string;
   endTime?: string;
   workHours?: number;
+  breakMinutes?: number;
+  earlyOvertime?: boolean;
+  overtime?: boolean;
+  lateNightOvertimeHours?: number;
 }
 
 interface BulkAttendanceRequest {
@@ -306,7 +314,7 @@ serve(async (req) => {
         if (!validation.valid) {
           return new Response(
             JSON.stringify({
-              error: validation.error || "必須フィールドが不足しています: date, startTime, endTime, staffId, workHours",
+              error: validation.error || "必須フィールドが不足しています: date, startTime, staffId, workHours",
             }),
             {
               headers: { ...corsHeaders, "Content-Type": "application/json" },

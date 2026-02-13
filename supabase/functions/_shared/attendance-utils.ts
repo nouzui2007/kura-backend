@@ -2,9 +2,13 @@ interface Attendance {
   id?: string;
   date: string;
   startTime: string;
-  endTime: string;
+  endTime?: string;
   staffId: string;
   workHours: number;
+  breakMinutes?: number;
+  earlyOvertime?: boolean;
+  overtime?: boolean;
+  lateNightOvertimeHours?: number;
 }
 
 interface BulkAttendanceItem {
@@ -12,6 +16,10 @@ interface BulkAttendanceItem {
   startTime?: string;
   endTime?: string;
   workHours?: number;
+  breakMinutes?: number;
+  earlyOvertime?: boolean;
+  overtime?: boolean;
+  lateNightOvertimeHours?: number;
 }
 
 // 一括出勤記録のバリデーション
@@ -56,8 +64,12 @@ export function convertBulkItemToAttendance(
     date: date,
     staffId: item.staffId,
     startTime: item.startTime || "00:00:00",
-    endTime: item.endTime || "00:00:00",
+    endTime: item.endTime || undefined,
     workHours: item.workHours || 0,
+    breakMinutes: item.breakMinutes,
+    earlyOvertime: item.earlyOvertime,
+    overtime: item.overtime,
+    lateNightOvertimeHours: item.lateNightOvertimeHours,
   };
 }
 
@@ -80,10 +92,6 @@ export function validateAttendance(attendance: Partial<Attendance>): {
 
   if (!attendance.startTime || typeof attendance.startTime !== 'string') {
     return { valid: false, error: "startTime is required" };
-  }
-
-  if (!attendance.endTime || typeof attendance.endTime !== 'string') {
-    return { valid: false, error: "endTime is required" };
   }
 
   if (!attendance.staffId || typeof attendance.staffId !== 'string') {

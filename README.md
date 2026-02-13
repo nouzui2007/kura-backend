@@ -179,6 +179,10 @@ supabase secrets set KEY_NAME=value
 - `PATCH /profile/{id}` - プロフィール更新
 - `DELETE /profile/{id}` - プロフィール削除
 
+### Work Analysis（勤務時間分析）
+
+- `POST /work-analysis` - 勤務時間分析（早出残業・残業・早上がり・深夜残業時間を算出）
+
 詳細なAPI仕様は `openapi.yaml` を参照してください。
 
 ## データベース構造
@@ -211,6 +215,7 @@ Edge Functionsは `supabase/functions/` ディレクトリにあります。
 - `system-settings/index.ts` - システム設定管理API
 - `payroll/index.ts` - 給与計算・管理API
 - `profile/index.ts` - プロフィール管理API
+- `work-analysis/index.ts` - 勤務時間分析API
 
 ### ユニットテスト
 
@@ -225,6 +230,7 @@ deno test supabase/functions/_shared/__tests__/utils.test.ts
 deno test supabase/functions/_shared/__tests__/staff-utils.test.ts
 deno test supabase/functions/_shared/__tests__/attendance-utils.test.ts
 deno test supabase/functions/_shared/__tests__/payroll-utils.test.ts
+deno test supabase/functions/_shared/__tests__/work-analysis-utils.test.ts
 
 # カバレッジ付きで実行
 deno test --coverage=coverage supabase/functions/_shared/__tests__/
@@ -237,6 +243,7 @@ deno test --coverage=coverage supabase/functions/_shared/__tests__/
 - `generateStaffId` - スタッフID生成
 - `validateBulkAttendanceRequest` - 一括出勤記録バリデーション
 - `convertBulkAttendanceList` - 一括出勤記録変換
+- `analyzeWorkTime` - 勤務時間分析（早出残業・残業・早上がり・深夜残業）
 - `validateAttendance` - 出勤記録バリデーション
 - `calculatePayroll` - 給与計算ロジック
 

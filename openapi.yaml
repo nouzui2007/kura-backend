@@ -18,6 +18,8 @@ tags:
     description: 給与計算・管理
   - name: Profile
     description: プロフィール管理
+  - name: WorkAnalysis
+    description: 勤務時間分析
 
 paths:
   /staff:
@@ -218,6 +220,18 @@ paths:
                         format: time
                       workHours:
                         type: number
+                      breakMinutes:
+                        type: integer
+                        description: 休憩時間（分単位）
+                      earlyOvertime:
+                        type: boolean
+                        description: 早出残業の有無
+                      overtime:
+                        type: boolean
+                        description: 残業の有無
+                      lateNightOvertimeHours:
+                        type: number
+                        description: 深夜残業時間（時間）
       responses:
         '200':
           description: 成功
@@ -279,6 +293,12 @@ paths:
                   staffId:
                     type: string
                   workHours:
+                    type: number
+                  earlyOvertime:
+                    type: boolean
+                  overtime:
+                    type: boolean
+                  lateNightOvertimeHours:
                     type: number
                   created_at:
                     type: string
@@ -450,6 +470,35 @@ paths:
                   id:
                     type: string
         '400':
+          $ref: '#/components/responses/Error'
+
+  /work-analysis:
+    post:
+      tags:
+        - WorkAnalysis
+      summary: 勤務時間分析
+      description: |
+        スタッフの勤務開始・終了時間から以下を算出します。
+        - 早出残業: 勤務開始が早出残業基準時刻より前の場合にあり
+        - 残業: 法定終了時刻（開始+法定労働時間）より後に勤務終了の場合にあり
+        - 早上がり: 法定終了時刻より前に勤務終了の場合にあり
+        - 深夜残業時間: 勤務終了が深夜開始時刻を超えた場合の重複時間（時間）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkAnalysisRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkAnalysisResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+        '500':
           $ref: '#/components/responses/Error'
 
   /payroll/{month}:
@@ -983,6 +1032,18 @@ components:
         workHours:
           type: number
           description: 勤務時間（時間単位）
+        breakMinutes:
+          type: integer
+          description: 休憩時間（分単位）
+        earlyOvertime:
+          type: boolean
+          description: 早出残業の有無
+        overtime:
+          type: boolean
+          description: 残業の有無
+        lateNightOvertimeHours:
+          type: number
+          description: 深夜残業時間（時間）
         created_at:
           type: string
           format: date-time
@@ -995,7 +1056,6 @@ components:
       required:
         - date
         - startTime
-        - endTime
         - staffId
         - workHours
       properties:
@@ -1008,10 +1068,23 @@ components:
         endTime:
           type: string
           format: time
+          description: 終了時刻（任意）
         staffId:
           type: string
         workHours:
           type: number
+        breakMinutes:
+          type: integer
+          description: 休憩時間（分単位）
+        earlyOvertime:
+          type: boolean
+          description: 早出残業の有無
+        overtime:
+          type: boolean
+          description: 残業の有無
+        lateNightOvertimeHours:
+          type: number
+          description: 深夜残業時間（時間）
 
     SystemSettings:
       type: object
@@ -1053,6 +1126,10 @@ components:
         lateNightEndHour:
           type: integer
           description: 深夜時間帯終了（時）
+        earlyOvertimeStandardHour:
+          type: integer
+          description: 早出残業基準時刻（時）
+          example: 7
         defaultHourlyRate:
           type: integer
           description: デフォルト時給（円）
@@ -1077,6 +1154,7 @@ components:
         - holidayRate
         - lateNightStartHour
         - lateNightEndHour
+        - earlyOvertimeStandardHour
         - defaultHourlyRate
       properties:
         regularHoursPerDay:
@@ -1101,6 +1179,9 @@ components:
           type: integer
         lateNightEndHour:
           type: integer
+        earlyOvertimeStandardHour:
+          type: integer
+          example: 7
         defaultHourlyRate:
           type: integer
 
@@ -1143,6 +1224,61 @@ components:
         data:
           type: object
           additionalProperties: true
+
+    WorkAnalysisRequest:
+      type: object
+      required:
+        - staffId
+        - workStartTime
+        - workEndTime
+        - date
+      properties:
+        staffId:
+          type: string
+          format: uuid
+          description: スタッフID
+        workStartTime:
+          type: string
+          pattern: "^\\d{1,2}:\\d{2}(:\\d{2})?$"
+          description: 勤務開始時刻（HH:mm または HH:mm:ss）
+          example: "09:00"
+        workEndTime:
+          type: string
+          pattern: "^\\d{1,2}:\\d{2}(:\\d{2})?$"
+          description: 勤務終了時刻（HH:mm または HH:mm:ss、跨日の場合は翌日として扱う）
+          example: "18:00"
+        date:
+          type: string
+          format: date
+          description: 勤務日（YYYY-MM-DD、跨日判定に使用）
+          example: "2025-02-12"
+
+    WorkAnalysisResponse:
+      type: object
+      properties:
+        staffId:
+          type: string
+          format: uuid
+          description: スタッフID
+        date:
+          type: string
+          format: date
+        workStartTime:
+          type: string
+        workEndTime:
+          type: string
+        earlyOvertime:
+          type: boolean
+          description: 早出残業あり（勤務開始が早出残業基準時刻より前）
+        overtime:
+          type: boolean
+          description: 残業あり（勤務終了が法定終了時刻より後）
+        earlyLeave:
+          type: boolean
+          description: 早上がり（勤務終了が法定終了時刻より前）
+        lateNightOvertimeHours:
+          type: number
+          description: 深夜残業時間（時間）
 
     Profile:
       type: object

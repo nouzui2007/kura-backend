@@ -13,6 +13,7 @@ const defaultSystemSettings = {
   holidayRate: 35,
   lateNightStartHour: 22,
   lateNightEndHour: 5,
+  earlyOvertimeStandardHour: 7,
   defaultHourlyRate: 1200,
 };
 

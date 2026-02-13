@@ -29,6 +29,7 @@ interface SystemSettings {
   holidayRate: number;
   lateNightStartHour: number;
   lateNightEndHour: number;
+  earlyOvertimeStandardHour: number;
   defaultHourlyRate: number;
 }
 
