@@ -31,6 +31,7 @@ interface SystemSettings {
   lateNightEndHour: number;
   earlyOvertimeStandardHour: number;
   earlyLeaveStandardHour: number;
+  overtimeStandardHour: number;
   defaultHourlyRate: number;
 }
 

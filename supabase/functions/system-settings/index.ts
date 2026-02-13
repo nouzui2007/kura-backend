@@ -24,6 +24,7 @@ interface SystemSettings {
   lateNightEndHour: number;
   earlyOvertimeStandardHour: number;
   earlyLeaveStandardHour: number;
+  overtimeStandardHour: number;
   defaultHourlyRate: number;
 }
 
@@ -150,6 +151,7 @@ serve(async (req) => {
           newSettings.lateNightEndHour === undefined ||
           newSettings.earlyOvertimeStandardHour === undefined ||
           newSettings.earlyLeaveStandardHour === undefined ||
+          newSettings.overtimeStandardHour === undefined ||
           newSettings.defaultHourlyRate === undefined
         ) {
           return new Response(

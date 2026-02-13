@@ -131,7 +131,7 @@ serve(async (req) => {
     const { data: settingsData, error: settingsError } = await supabaseClient
       .from("system_settings")
       .select(
-        "regularHoursPerDay, earlyOvertimeStandardHour, earlyLeaveStandardHour, lateNightStartHour, lateNightEndHour"
+        "earlyOvertimeStandardHour, earlyLeaveStandardHour, overtimeStandardHour, lateNightStartHour, lateNightEndHour"
       )
       .order("created_at", { ascending: false })
       .limit(1)
@@ -148,9 +148,9 @@ serve(async (req) => {
     }
 
     const systemSettings: SystemSettingsForWorkAnalysis = {
-      regularHoursPerDay: Number(settingsData.regularHoursPerDay),
       earlyOvertimeStandardHour: Number(settingsData.earlyOvertimeStandardHour),
       earlyLeaveStandardHour: Number(settingsData.earlyLeaveStandardHour),
+      overtimeStandardHour: Number(settingsData.overtimeStandardHour),
       lateNightStartHour: Number(settingsData.lateNightStartHour),
       lateNightEndHour: Number(settingsData.lateNightEndHour),
     };
